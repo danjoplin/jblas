@@ -45,6 +45,7 @@ package org.jblas.exceptions;
  *
  * @author mikio
  */
+@SuppressWarnings("serial")
 public class LapackConvergenceException extends LapackException {
   	public LapackConvergenceException(String function, String msg) {
 		super(function, msg);

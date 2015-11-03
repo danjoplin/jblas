@@ -38,6 +38,7 @@
 
 package org.jblas.exceptions;
 
+@SuppressWarnings("serial")
 public class NoEigenResultException extends RuntimeException {
 	public NoEigenResultException(String message) {
 		super(message);

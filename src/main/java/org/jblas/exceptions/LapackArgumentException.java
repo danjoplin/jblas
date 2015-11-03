@@ -41,6 +41,7 @@ package org.jblas.exceptions;
  * whether some arguments contain illegal arguments. This exception class
  * automatically constructs a message for a given argument index.
  */
+@SuppressWarnings("serial")
 public class LapackArgumentException extends LapackException {
     /** 
      * Construct exception for given function and info. Message

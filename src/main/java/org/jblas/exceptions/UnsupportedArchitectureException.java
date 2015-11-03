@@ -9,6 +9,7 @@ package org.jblas.exceptions;
  * Date: 2/13/13
  * Time: 12:28 PM
  */
+@SuppressWarnings("serial")
 public class UnsupportedArchitectureException extends RuntimeException {
   public UnsupportedArchitectureException(String message) {
     super(message);

@@ -153,7 +153,7 @@ public class SanityChecks {
         DoubleMatrix A = new DoubleMatrix(3, 3, 2.0, 1.0, 0.0, 1.0, 2.0, 1.0, 0.0, 1.0, 2.0);
         DoubleMatrix B = new DoubleMatrix(3, 3, 4.0, 2.0, 1.0, 2.0, 4.0, 2.0, 1.0, 2.0, 4.0);
 
-        DoubleMatrix[] LA = org.jblas.Eigen.symmetricGeneralizedEigenvectors(A, B);
+        org.jblas.Eigen.symmetricGeneralizedEigenvectors(A, B);
 
         check("checkign existence of gsyevd (generalized eigenvalues)...", true);
     }

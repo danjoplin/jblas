@@ -2344,11 +2344,9 @@ public class FloatMatrix implements Serializable {
 
         final float[] array = data;
 
-        Arrays.sort(indices, new Comparator() {
+        Arrays.sort(indices, new Comparator<Integer>() {
 
-            public int compare(Object o1, Object o2) {
-                int i = (Integer) o1;
-                int j = (Integer) o2;
+            public int compare(Integer i, Integer j) {
                 if (array[i] < array[j]) {
                     return -1;
                 } else if (array[i] == array[j]) {
@@ -2789,43 +2787,43 @@ public class FloatMatrix implements Serializable {
     }
 
     public static FloatMatrix loadAsciiFile(String filename) throws IOException {
-        BufferedReader is = new BufferedReader(new InputStreamReader(new FileInputStream(filename)));
-
         // Go through file and count columns and rows. What makes this endeavour a bit difficult is
         // that files can have leading or trailing spaces leading to spurious fields
         // after String.split().
         String line;
         int rows = 0;
         int columns = -1;
-        while ((line = is.readLine()) != null) {
-            String[] elements = WHITESPACES.split(line);
-            int numElements = elements.length;
-            if (elements[0].length() == 0) {
-                numElements--;
-            }
-            if (elements[elements.length - 1].length() == 0) {
-                numElements--;
-            }
+        
+    	try (BufferedReader is = new BufferedReader(new InputStreamReader(new FileInputStream(filename)))) {
+    		
+	        while ((line = is.readLine()) != null) {
+	            String[] elements = WHITESPACES.split(line);
+	            int numElements = elements.length;
+	            if (elements[0].length() == 0) {
+	                numElements--;
+	            }
+	            if (elements[elements.length - 1].length() == 0) {
+	                numElements--;
+	            }
+	
+	            if (columns == -1) {
+	                columns = numElements;
+	            } else {
+	                if (columns != numElements) {
+	                    throw new IOException("Number of elements changes in line " + line + ".");
+	                }
+	            }
+	
+	            rows++;
+	        }
+    	}
 
-            if (columns == -1) {
-                columns = numElements;
-            } else {
-                if (columns != numElements) {
-                    throw new IOException("Number of elements changes in line " + line + ".");
-                }
-            }
-
-            rows++;
-        }
-        is.close();
-
-        FileInputStream fis = new FileInputStream(filename);
-        try {
+        try (FileInputStream fis = new FileInputStream(filename);
+        		BufferedReader nis = new BufferedReader(new InputStreamReader(fis))) {
             // Go through file a second time process the actual data.
-            is = new BufferedReader(new InputStreamReader(fis));
             FloatMatrix result = new FloatMatrix(rows, columns);
             int r = 0;
-            while ((line = is.readLine()) != null) {
+            while ((line = nis.readLine()) != null) {
                 String[] elements = WHITESPACES.split(line);
                 int firstElement = (elements[0].length() == 0) ? 1 : 0;
                 for (int c = 0, cc = firstElement; c < columns; c++, cc++) {
@@ -2834,44 +2832,42 @@ public class FloatMatrix implements Serializable {
                 r++;
             }
             return result;
-        } finally {
-            fis.close();
         }
+        
     }
 
     public static FloatMatrix loadCSVFile(String filename) throws IOException {
-        BufferedReader is = new BufferedReader(new InputStreamReader(new FileInputStream(filename)));
 
         List<FloatMatrix> rows = new LinkedList<FloatMatrix>();
         String line;
         int columns = -1;
-        while ((line = is.readLine()) != null) {
-            String[] elements = COMMA.split(line);
-            int numElements = elements.length;
-            if (elements[0].length() == 0) {
-                numElements--;
-            }
-            if (elements[elements.length - 1].length() == 0) {
-                numElements--;
-            }
-
-            if (columns == -1) {
-                columns = numElements;
-            } else {
-                if (columns != numElements) {
-                    throw new IOException("Number of elements changes in line " + line + ".");
-                }
-            }
-
-            FloatMatrix row = new FloatMatrix(columns);
-            for (int c = 0; c < columns; c++) {
-                row.put(c, Float.valueOf(elements[c]));
-            }
-            rows.add(row);
-        }
-        is.close();
-
-        System.out.println("Done reading file");
+    	
+    	try (BufferedReader is = new BufferedReader(new InputStreamReader(new FileInputStream(filename)))) {
+    		while ((line = is.readLine()) != null) {
+	            String[] elements = COMMA.split(line);
+	            int numElements = elements.length;
+	            if (elements[0].length() == 0) {
+	                numElements--;
+	            }
+	            if (elements[elements.length - 1].length() == 0) {
+	                numElements--;
+	            }
+	
+	            if (columns == -1) {
+	                columns = numElements;
+	            } else {
+	                if (columns != numElements) {
+	                    throw new IOException("Number of elements changes in line " + line + ".");
+	                }
+	            }
+	
+	            FloatMatrix row = new FloatMatrix(columns);
+	            for (int c = 0; c < columns; c++) {
+	                row.put(c, Float.valueOf(elements[c]));
+	            }
+	            rows.add(row);
+	        }
+    	}
 
         FloatMatrix result = new FloatMatrix(rows.size(), columns);
         int r = 0;

@@ -40,6 +40,7 @@ package org.jblas.exceptions;
  * Base class for all exceptions within LAPACK. Also reports the function where the
  * error is.
  */
+@SuppressWarnings("serial")
 public class LapackException extends RuntimeException {
         /** Construct new LapackException for the given function. */
 	public LapackException(String function) {

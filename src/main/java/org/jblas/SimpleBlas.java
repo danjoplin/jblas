@@ -179,28 +179,24 @@ public class SimpleBlas {
 	 * multiplication)
 	 */
 	public static DoubleMatrix gemv(double alpha, DoubleMatrix a,
-			DoubleMatrix x, double beta, DoubleMatrix y) {
-		if (false) {
-			NativeBlas.dgemv('N', a.rows, a.columns, alpha, a.data, 0, a.rows, x.data, 0,
-					1, beta, y.data, 0, 1);
+		DoubleMatrix x, double beta, DoubleMatrix y) {
+		
+		if (beta != 0.0) {
+			for (int i = 0; i < y.length; i++)
+				y.data[i] = beta * y.data[i];
 		} else {
-			if (beta != 0.0) {
-				for (int i = 0; i < y.length; i++)
-					y.data[i] = beta * y.data[i];
-			} else {
-				for (int i = 0; i < y.length; i++)
-					y.data[i] = 0.0;
-			}
+			for (int i = 0; i < y.length; i++)
+				y.data[i] = 0.0;
+		}
 
-	
-			for (int j = 0; j < a.columns; j++) {
-				double xj = x.get(j);
-				if (xj != 0.0) {
-					for (int i = 0; i < a.rows; i++)
-							y.data[i] += alpha * a.get(i, j) * xj;
-				}
+		for (int j = 0; j < a.columns; j++) {
+			double xj = x.get(j);
+			if (xj != 0.0) {
+				for (int i = 0; i < a.rows; i++)
+						y.data[i] += alpha * a.get(i, j) * xj;
 			}
 		}
+		
 		return y;
 	}
 
@@ -608,25 +604,20 @@ public class SimpleBlas {
 	 */
 	public static FloatMatrix gemv(float alpha, FloatMatrix a,
 			FloatMatrix x, float beta, FloatMatrix y) {
-		if (false) {
-			NativeBlas.sgemv('N', a.rows, a.columns, alpha, a.data, 0, a.rows, x.data, 0,
-					1, beta, y.data, 0, 1);
+		if (beta != 0.0f) {
+			for (int i = 0; i < y.length; i++)
+				y.data[i] = beta * y.data[i];
 		} else {
-			if (beta != 0.0f) {
-				for (int i = 0; i < y.length; i++)
-					y.data[i] = beta * y.data[i];
-			} else {
-				for (int i = 0; i < y.length; i++)
-					y.data[i] = 0.0f;
-			}
+			for (int i = 0; i < y.length; i++)
+				y.data[i] = 0.0f;
+		}
 
-	
-			for (int j = 0; j < a.columns; j++) {
-				float xj = x.get(j);
-				if (xj != 0.0f) {
-					for (int i = 0; i < a.rows; i++)
-							y.data[i] += alpha * a.get(i, j) * xj;
-				}
+
+		for (int j = 0; j < a.columns; j++) {
+			float xj = x.get(j);
+			if (xj != 0.0f) {
+				for (int i = 0; i < a.rows; i++)
+						y.data[i] += alpha * a.get(i, j) * xj;
 			}
 		}
 		return y;

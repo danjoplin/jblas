@@ -37,10 +37,6 @@
 // --- END LICENSE BLOCK ---
 package org.jblas;
 
-import org.jblas.exceptions.SizeException;
-import org.jblas.ranges.Range;
-import org.jblas.util.Random;
-
 import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -48,7 +44,6 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.PrintWriter;
@@ -61,6 +56,10 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.regex.Pattern;
+
+import org.jblas.exceptions.SizeException;
+import org.jblas.ranges.Range;
+import org.jblas.util.Random;
 
 /**
  * A general matrix class for <tt>double</tt> typed values.
@@ -394,18 +393,20 @@ public class DoubleMatrix implements Serializable {
      */
     public DoubleMatrix(double[][] data) {
         this(data.length, data[0].length);
-
-        for (int r = 0; r < rows; r++) {
-            assert (data[r].length == columns);
-        }
-
-        for (int r = 0; r < rows; r++) {
-            for (int c = 0; c < columns; c++) {
-                put(r, c, data[r][c]);
+        
+        for (int rowIndex=0;rowIndex<rows;rowIndex++) {
+        	// Safety first
+            assert (data[rowIndex].length == columns);
+            
+            for (int colIndex=0;colIndex<columns;colIndex++) {
+            	// rowIndex + rows * columnIndex = index in the underlying array
+                this.data[rowIndex + data.length * colIndex] = data[rowIndex][colIndex];
             }
+            
         }
+        
     }
-
+    
     /**
      * Creates a DoubleMatrix column vector from the given List&lt;Double&rt;.
      *
@@ -437,7 +438,7 @@ public class DoubleMatrix implements Serializable {
 
         // process rest
         for (int r = 0; r < rowValues.length; r++) {
-          String[] columnValues = WHITESPACES.split(rowValues[r].trim());
+        	String[] columnValues = WHITESPACES.split(rowValues[r].trim());
 
             if (r == 0) {
                 result = new DoubleMatrix(rowValues.length, columnValues.length);
@@ -509,7 +510,7 @@ public class DoubleMatrix implements Serializable {
         DoubleMatrix m = new DoubleMatrix(rows, columns);
 
         for (int i = 0; i < rows * columns; i++) {
-            m.put(i, 1.0);
+        	m.data[i] = 1.;
         }
 
         return m;
@@ -524,8 +525,8 @@ public class DoubleMatrix implements Serializable {
     public static DoubleMatrix eye(int n) {
         DoubleMatrix m = new DoubleMatrix(n, n);
 
-        for (int i = 0; i < n; i++) {
-            m.put(i, i, 1.0);
+        for (int i = 0; i < n*n; i+=n+1) {
+        	m.data[i] = 1.;
         }
 
         return m;
@@ -598,7 +599,7 @@ public class DoubleMatrix implements Serializable {
     public static DoubleMatrix logspace(double lower, double upper, int size) {
         DoubleMatrix result = new DoubleMatrix(size);
         for (int i = 0; i < size; i++) {
-            double t = (double) i / (size - 1);
+            double t = i / (size - 1.);
             double e = lower * (1 - t) + t * upper;
             result.put(i, (double) Math.pow(10.0, e));
         }
@@ -617,7 +618,7 @@ public class DoubleMatrix implements Serializable {
     public static DoubleMatrix linspace(int lower, int upper, int size) {
         DoubleMatrix result = new DoubleMatrix(size);
         for (int i = 0; i < size; i++) {
-            double t = (double) i / (size - 1);
+            double t = i / (size - 1.);
             result.put(i, lower * (1 - t) + t * upper);
         }
         return result;
@@ -779,9 +780,9 @@ public class DoubleMatrix implements Serializable {
         DoubleMatrix result = new DoubleMatrix(b - a);
 
         for (int k = 0; k < b - a; k++) {
-            result.put(k, get(a + k));
+        	result.data[k] = data[a+k];
         }
-
+        
         return result;
     }
 
@@ -789,11 +790,43 @@ public class DoubleMatrix implements Serializable {
     public DoubleMatrix getColumnRange(int r, int a, int b) {
         DoubleMatrix result = new DoubleMatrix(1, b - a);
 
+        // rowIndex + rows * columnIndex
         for (int k = 0; k < b - a; k++) {
             result.put(k, get(r, a + k));
         }
-
+        
         return result;
+    }
+    
+    public static void main(String[] args) {
+    	
+    	DoubleMatrix a = new DoubleMatrix(new double[][]{{1,2,3}, {4,5,6}, {7,8,9}, {10,11,12}});
+    	
+    	int rounds = 100000000;
+    	int r;
+    	int c;
+    	long time = System.currentTimeMillis();
+    	
+    	for (int i=0; i<rounds; i++) {
+    		r = Random.nextInt(a.rows);
+    		c = Random.nextInt(a.columns-2);
+    		a.getRange(r, r+1, c, c+2);
+    	}
+    	
+    	long first = System.currentTimeMillis() - time;
+    	
+    	time = System.currentTimeMillis();
+    	
+    	for (int i=0; i<rounds; i++) {
+    		r = Random.nextInt(a.rows);
+    		c = Random.nextInt(a.columns-2);
+    		a.getColumnRange(r, c, c+2);
+    	}
+    	
+    	long second = System.currentTimeMillis() - time;
+    	
+    	System.out.println(first +"\t" + second);
+    	
     }
 
     /** Get elements from a column and rows <tt>a/tt> to <tt>b</tt>. */
@@ -812,14 +845,23 @@ public class DoubleMatrix implements Serializable {
      * columns <tt>ca</tt> to <tt>cb</tt>.
      */
     public DoubleMatrix getRange(int ra, int rb, int ca, int cb) {
-        DoubleMatrix result = new DoubleMatrix(rb - ra, cb - ca);
+    	int colCount = cb-ca;
+    	int rowCount = rb-ra;
+    	
+        DoubleMatrix result = new DoubleMatrix(rowCount, colCount);
 
-        for (int i = 0; i < rb - ra; i++) {
-            for (int j = 0; j < cb - ca; j++) {
-                result.put(i, j, get(ra + i, ca + j));
+        int k = ra + (ca*rows);
+
+        for (int i=0; i<rowCount*colCount; i++){
+            result.data[i] = data[k];
+            
+            if (k%rows == rb-1) {
+                k += (rows - rowCount);
             }
+            
+            k++;
         }
-
+        
         return result;
     }
 
@@ -838,19 +880,20 @@ public class DoubleMatrix implements Serializable {
     }
 
     public DoubleMatrix getRows(Range indices, DoubleMatrix result) {
-        indices.init(0, rows);
-        if (result.rows < indices.length()) {
-            throw new SizeException("Result matrix does not have enough rows (" + result.rows + " < " + indices.length() + ")");
-        }
-        result.checkColumns(columns);
+		indices.init(0, rows);
+		if (result.rows < indices.length()) {
+		    throw new SizeException("Result matrix does not have enough rows (" + result.rows + " < " + indices.length() + ")");
+	    }
 
-      indices.init(0, rows);
-      for (int r = 0; indices.hasMore(); indices.next(), r++) {
-            for (int c = 0; c < columns; c++) {
-                result.put(r, c, get(indices.value(), c));
-            }
-        }
-        return result;
+		result.checkColumns(columns);
+	    indices.init(0, rows);
+	    
+	    for (int r = 0; indices.hasMore(); indices.next(), r++) {
+	        for (int c = 0; c < columns; c++) {
+	            result.put(r, c, get(indices.value(), c));
+	        }
+	    }
+	    return result;
     }
 
     public DoubleMatrix getRows(Range indices) {
@@ -2344,11 +2387,9 @@ public class DoubleMatrix implements Serializable {
 
         final double[] array = data;
 
-        Arrays.sort(indices, new Comparator() {
+        Arrays.sort(indices, new Comparator<Integer>() {
 
-            public int compare(Object o1, Object o2) {
-                int i = (Integer) o1;
-                int j = (Integer) o2;
+            public int compare(Integer i, Integer j) {
                 if (array[i] < array[j]) {
                     return -1;
                 } else if (array[i] == array[j]) {
@@ -2789,43 +2830,44 @@ public class DoubleMatrix implements Serializable {
     }
 
     public static DoubleMatrix loadAsciiFile(String filename) throws IOException {
-        BufferedReader is = new BufferedReader(new InputStreamReader(new FileInputStream(filename)));
-
-        // Go through file and count columns and rows. What makes this endeavour a bit difficult is
+    	// Go through file and count columns and rows. What makes this endeavour a bit difficult is
         // that files can have leading or trailing spaces leading to spurious fields
         // after String.split().
         String line;
         int rows = 0;
         int columns = -1;
-        while ((line = is.readLine()) != null) {
-            String[] elements = WHITESPACES.split(line);
-            int numElements = elements.length;
-            if (elements[0].length() == 0) {
-                numElements--;
-            }
-            if (elements[elements.length - 1].length() == 0) {
-                numElements--;
-            }
+        
+    	try (BufferedReader is = new BufferedReader(new InputStreamReader(new FileInputStream(filename)))){
+	        while ((line = is.readLine()) != null) {
+	            String[] elements = WHITESPACES.split(line);
+	            int numElements = elements.length;
+	            if (elements[0].length() == 0) {
+	                numElements--;
+	            }
+	            if (elements[elements.length - 1].length() == 0) {
+	                numElements--;
+	            }
+	
+	            if (columns == -1) {
+	                columns = numElements;
+	            } else {
+	                if (columns != numElements) {
+	                    throw new IOException("Number of elements changes in line " + line + ".");
+	                }
+	            }
+	
+	            rows++;
+	        }
+    	}
 
-            if (columns == -1) {
-                columns = numElements;
-            } else {
-                if (columns != numElements) {
-                    throw new IOException("Number of elements changes in line " + line + ".");
-                }
-            }
-
-            rows++;
-        }
-        is.close();
-
-        FileInputStream fis = new FileInputStream(filename);
-        try {
-            // Go through file a second time process the actual data.
-            is = new BufferedReader(new InputStreamReader(fis));
+        // Go through file a second time process the actual data.
+        try (FileInputStream fis = new FileInputStream(filename);
+        		BufferedReader nis = new BufferedReader(new InputStreamReader(fis))) {
+        	
             DoubleMatrix result = new DoubleMatrix(rows, columns);
+            
             int r = 0;
-            while ((line = is.readLine()) != null) {
+            while ((line = nis.readLine()) != null) {
                 String[] elements = WHITESPACES.split(line);
                 int firstElement = (elements[0].length() == 0) ? 1 : 0;
                 for (int c = 0, cc = firstElement; c < columns; c++, cc++) {
@@ -2833,53 +2875,54 @@ public class DoubleMatrix implements Serializable {
                 }
                 r++;
             }
+            
             return result;
-        } finally {
-            fis.close();
         }
     }
 
     public static DoubleMatrix loadCSVFile(String filename) throws IOException {
-        BufferedReader is = new BufferedReader(new InputStreamReader(new FileInputStream(filename)));
-
+    	
         List<DoubleMatrix> rows = new LinkedList<DoubleMatrix>();
         String line;
         int columns = -1;
-        while ((line = is.readLine()) != null) {
-            String[] elements = COMMA.split(line);
-            int numElements = elements.length;
-            if (elements[0].length() == 0) {
-                numElements--;
-            }
-            if (elements[elements.length - 1].length() == 0) {
-                numElements--;
-            }
-
-            if (columns == -1) {
-                columns = numElements;
-            } else {
-                if (columns != numElements) {
-                    throw new IOException("Number of elements changes in line " + line + ".");
-                }
-            }
-
-            DoubleMatrix row = new DoubleMatrix(columns);
-            for (int c = 0; c < columns; c++) {
-                row.put(c, Double.valueOf(elements[c]));
-            }
-            rows.add(row);
-        }
-        is.close();
-
-        System.out.println("Done reading file");
+        
+    	try (BufferedReader is = new BufferedReader(new InputStreamReader(new FileInputStream(filename)))) {
+	
+	        while ((line = is.readLine()) != null) {
+	            String[] elements = COMMA.split(line);
+	            int numElements = elements.length;
+	            if (elements[0].length() == 0) {
+	                numElements--;
+	            }
+	            if (elements[elements.length - 1].length() == 0) {
+	                numElements--;
+	            }
+	
+	            if (columns == -1) {
+	                columns = numElements;
+	            } else {
+	                if (columns != numElements) {
+	                    throw new IOException("Number of elements changes in line " + line + ".");
+	                }
+	            }
+	
+	            DoubleMatrix row = new DoubleMatrix(columns);
+	            for (int c = 0; c < columns; c++) {
+	                row.put(c, Double.valueOf(elements[c]));
+	            }
+	            rows.add(row);
+	        }
+    	}
 
         DoubleMatrix result = new DoubleMatrix(rows.size(), columns);
         int r = 0;
         Iterator<DoubleMatrix> ri = rows.iterator();
+        
         while (ri.hasNext()) {
             result.putRow(r, ri.next());
             r++;
         }
+        
         return result;
     }
 
